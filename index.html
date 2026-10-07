@@ -717,11 +717,12 @@ drawer.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('drawer-open')) setDrawer(false); });
 
 // 예약 폼
-// 희망 방문일: 오늘 ~ 1년 뒤까지만 선택 (max 를 지정하면 연도 입력이 4자리로 제한됨)
+// 희망 방문일: 내일 ~ 1년 뒤까지만 선택 (max 를 지정하면 연도 입력이 4자리로 제한됨)
 const ymd = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const fDate = document.getElementById('f-date');
-const today = new Date(); const limit = new Date(); limit.setFullYear(today.getFullYear()+1);
-fDate.min = ymd(today); fDate.max = ymd(limit);
+const today = new Date(); const tomorrow = new Date(); tomorrow.setDate(today.getDate()+1);
+const limit = new Date(); limit.setFullYear(today.getFullYear()+1);
+fDate.min = ymd(tomorrow); fDate.max = ymd(limit);
 const form = document.getElementById('reserveForm');
 const msg = document.getElementById('formMsg');
 const PH = { name:'이름', tel:'010-0000-0000' };
@@ -764,7 +765,7 @@ form.addEventListener('submit', (e) => {
   if (!tel) { setErr('tel','연락처를 입력해 주세요', true); errs.push('tel'); }
   else if (!/^01[0-9]{8,9}$/.test(tel)) { setErr('tel','010-0000-0000 형식으로 입력해 주세요'); errs.push('tel'); }
   if (!form.date.value) { setErr('date','희망 방문일을 선택해 주세요'); errs.push('date'); }
-  else if (form.date.value < fDate.min || form.date.value > fDate.max) { setErr('date','오늘부터 1년 이내 날짜를 선택해 주세요'); errs.push('date'); }
+  else if (form.date.value < fDate.min || form.date.value > fDate.max) { setErr('date','내일부터 1년 이내 날짜를 선택해 주세요'); errs.push('date'); }
   if (!form.agree.checked) { setErr('agree','개인정보 수집·이용에 동의해 주세요'); errs.push('agree'); }
   if (errs.length) { form[errs[0]].focus(); return; }
   sendReservation();
