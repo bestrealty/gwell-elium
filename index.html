@@ -274,6 +274,23 @@ figcaption.cap{font-size:11.5px;color:var(--muted);text-align:right;padding:8px 
   body{padding-bottom:52px}
 }
 </style>
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1706570081173452');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1706570081173452&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 </head>
 <body>
 
@@ -286,7 +303,7 @@ figcaption.cap{font-size:11.5px;color:var(--muted);text-align:right;padding:8px 
       <span class="brand-mark">GWELL ELIUM</span>
       <span class="brand-sub">지웰 엘리움 양주 덕계역</span>
     </a>
-    <a class="header-cta" href="#contact">
+    <a class="header-cta" href="#contact" data-track="header">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="1"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>방문예약하기
     </a>
   </div>
@@ -308,7 +325,7 @@ figcaption.cap{font-size:11.5px;color:var(--muted);text-align:right;padding:8px 
       <li><a href="#contact">방문예약 <small>CONTACT</small></a></li>
     </ul>
   </nav>
-  <div class="drawer-cta"><a href="#contact">방문 예약하기</a></div>
+  <div class="drawer-cta"><a href="#contact" data-track="drawer">방문 예약하기</a></div>
 </aside>
 
 <main id="top">
@@ -326,7 +343,7 @@ figcaption.cap{font-size:11.5px;color:var(--muted);text-align:right;padding:8px 
   <div class="hero-bottom">
     <div class="wrap">
       <div class="hero-actions">
-        <a class="btn btn-accent" href="#contact">방문 예약하기</a>
+        <a class="btn btn-accent" href="#contact" data-track="hero">방문 예약하기</a>
         <a class="btn btn-ghost" href="#types">타입 보기</a>
       </div>
       <div class="lines">
@@ -664,6 +681,14 @@ tabBtns.forEach((b,i) => {
   });
 });
 
+// Meta 픽셀 이벤트
+function px(type, name, params){ try { if (window.fbq) fbq(type, name, params || {}); } catch(e){} }
+// 1) 방문예약하기 버튼 클릭 (보조 지표)
+document.querySelectorAll('[data-track]').forEach(a => a.addEventListener('click', () =>
+  px('trackCustom', 'ReserveClick', { position: a.dataset.track })));
+// 2) 전화 상담 클릭
+document.querySelectorAll('a[href^="tel:"]').forEach(a => a.addEventListener('click', () => px('track', 'Contact')));
+
 // 드로어 메뉴
 const btn = document.querySelector('.menu-btn');
 const drawer = document.getElementById('drawer');
@@ -691,6 +716,8 @@ form.addEventListener('submit', (e) => {
   if (!/^01[0-9]{8,9}$/.test(tel)) { msg.textContent = '연락처를 010-0000-0000 형식으로 입력해 주세요.'; form.tel.focus(); return; }
   if (!form.date.value) { msg.textContent = '희망 방문일을 선택해 주세요.'; form.date.focus(); return; }
   if (!form.agree.checked) { msg.textContent = '개인정보 수집·이용에 동의해야 예약할 수 있습니다.'; form.agree.focus(); return; }
+  // 3) 예약 신청 완료 = 메인 전환 (Lead). 개인정보는 픽셀로 보내지 않음
+  if (!form.dataset.sent) { px('track', 'Lead', { content_name: '방문예약', content_category: form.type.value || '미선택' }); form.dataset.sent = '1'; }
   if (!form.getAttribute('action')) { msg.textContent = '입력 확인 완료. 아직 전송 주소가 연결되지 않아 저장되지 않았습니다.'; return; }
   form.submit();
 });
