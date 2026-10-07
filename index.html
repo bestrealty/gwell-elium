@@ -256,6 +256,9 @@ figcaption.cap{font-size:11.5px;color:var(--muted);text-align:right;padding:8px 
 .form .btn{width:100%;background:var(--ink);color:#fff}
 .form .btn:hover{background:var(--ink-2)}
 .form-msg{margin-top:10px;font-size:14px;min-height:1.4em}
+.form-msg.ok{color:var(--accent-deep);font-weight:700}
+.form-msg.fail{color:#D93025;font-weight:600}
+.form .btn:disabled{opacity:.6;cursor:wait}
 .field input.invalid,.field select.invalid{border-color:#D93025;box-shadow:0 0 0 3px rgba(217,48,37,.12)}
 .field input.invalid::placeholder{color:#D93025;opacity:1;font-weight:600}
 .err{display:none;margin-top:5px;font-size:13px;font-weight:600;color:#D93025}
@@ -582,8 +585,9 @@ src="https://www.facebook.com/tr?id=1706570081173452&ev=PageView&noscript=1"
       <p class="addr">현장 · 경기도 양주시 덕계동 152번지 일원</p>
     </div>
 
-    <!-- 폼 연동 전: action 을 Google Apps Script 또는 Formspree 주소로 교체 -->
-    <form class="form" id="reserveForm" action="" method="post" novalidate>
+    <form class="form" id="reserveForm" novalidate>
+      <!-- 스팸 방지용 숨김 칸 (사람에게는 안 보임) -->
+      <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
       <div class="field"><label for="f-name">이름</label><input id="f-name" name="name" type="text" autocomplete="name" placeholder="이름" required aria-describedby="e-name"><p class="err" id="e-name" role="alert"></p></div>
       <div class="field"><label for="f-tel">연락처</label><input id="f-tel" name="tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="010-0000-0000" maxlength="13" required aria-describedby="e-tel"><p class="err" id="e-tel" role="alert"></p></div>
       <div class="field"><label for="f-date">희망 방문일</label><input id="f-date" name="date" type="date" required aria-describedby="e-date"><p class="err" id="e-date" role="alert"></p></div>
@@ -758,11 +762,44 @@ form.addEventListener('submit', (e) => {
   if (!form.date.value) { setErr('date','희망 방문일을 선택해 주세요'); errs.push('date'); }
   if (!form.agree.checked) { setErr('agree','개인정보 수집·이용에 동의해 주세요'); errs.push('agree'); }
   if (errs.length) { form[errs[0]].focus(); return; }
-  // 3) 예약 신청 완료 = 메인 전환 (Lead). 개인정보는 픽셀로 보내지 않음
-  if (!form.dataset.sent) { px('track', 'Lead', { content_name: '방문예약', content_category: form.type.value || '미선택' }); form.dataset.sent = '1'; }
-  if (!form.getAttribute('action')) { msg.textContent = '입력 확인 완료. 아직 전송 주소가 연결되지 않아 저장되지 않았습니다.'; return; }
-  form.submit();
+  sendReservation();
 });
+
+// ▼ Google Apps Script 웹앱 주소를 여기에 붙여넣으세요
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwLgws_tuH2mB-InU0CQfUJ4Ijcd4C6VKWC_fMCW3Jm6bCWxzz7TFFcVufkaKhbEY4/exec';
+
+function sourceInfo(){
+  const q = new URLSearchParams(location.search);
+  const utm = ['utm_source','utm_medium','utm_campaign','utm_content'].map(k => q.get(k)).filter(Boolean).join(' / ');
+  return utm || (q.get('fbclid') ? 'facebook' : (document.referrer ? new URL(document.referrer).hostname : '직접 유입'));
+}
+
+async function sendReservation(){
+  const submitBtn = form.querySelector('button[type=submit]');
+  if (!SCRIPT_URL) { msg.className='form-msg fail'; msg.textContent = '전송 주소(SCRIPT_URL)가 아직 연결되지 않았습니다.'; return; }
+  const data = new URLSearchParams({
+    name: form.name.value.trim(),
+    tel: form.tel.value,
+    date: form.date.value,
+    type: form.type.value || '미선택',
+    agree: form.agree.checked ? 'Y' : '',
+    source: sourceInfo(),
+    page: location.href.split('#')[0],
+    website: form.website.value
+  });
+  submitBtn.disabled = true; submitBtn.textContent = '전송 중...'; msg.className='form-msg'; msg.textContent='';
+  try {
+    await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body:data });
+    // 3) 저장 요청이 나간 뒤에만 메인 전환(Lead) 기록. 개인정보는 픽셀로 보내지 않음
+    px('track', 'Lead', { content_name: '방문예약', content_category: form.type.value || '미선택' });
+    msg.className='form-msg ok'; msg.textContent = '방문 예약 신청이 접수되었습니다. 확인 후 연락드리겠습니다.';
+    form.reset();
+  } catch (err) {
+    msg.className='form-msg fail'; msg.textContent = '전송에 실패했습니다. 잠시 후 다시 시도하거나 전화로 문의해 주세요.';
+  } finally {
+    submitBtn.disabled = false; submitBtn.textContent = '방문 예약 신청';
+  }
+}
 </script>
 </body>
 </html>
