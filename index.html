@@ -256,6 +256,12 @@ figcaption.cap{font-size:11.5px;color:var(--muted);text-align:right;padding:8px 
 .form .btn{width:100%;background:var(--ink);color:#fff}
 .form .btn:hover{background:var(--ink-2)}
 .form-msg{margin-top:10px;font-size:14px;min-height:1.4em}
+.field input.invalid,.field select.invalid{border-color:#D93025;box-shadow:0 0 0 3px rgba(217,48,37,.12)}
+.field input.invalid::placeholder{color:#D93025;opacity:1;font-weight:600}
+.err{display:none;margin-top:5px;font-size:13px;font-weight:600;color:#D93025}
+.err.show{display:block}
+.check.invalid{color:#D93025}
+.check.invalid input{outline:2px solid #D93025;outline-offset:1px}
 @media (max-width:860px){.contact{padding:48px var(--gutter)}.contact-card{grid-template-columns:1fr;padding:36px 22px;gap:32px}}
 
 /* 푸터 */
@@ -578,9 +584,9 @@ src="https://www.facebook.com/tr?id=1706570081173452&ev=PageView&noscript=1"
 
     <!-- 폼 연동 전: action 을 Google Apps Script 또는 Formspree 주소로 교체 -->
     <form class="form" id="reserveForm" action="" method="post" novalidate>
-      <div class="field"><label for="f-name">이름</label><input id="f-name" name="name" type="text" autocomplete="name" required></div>
-      <div class="field"><label for="f-tel">연락처</label><input id="f-tel" name="tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="010-0000-0000" required></div>
-      <div class="field"><label for="f-date">희망 방문일</label><input id="f-date" name="date" type="date" required></div>
+      <div class="field"><label for="f-name">이름</label><input id="f-name" name="name" type="text" autocomplete="name" placeholder="이름" required aria-describedby="e-name"><p class="err" id="e-name" role="alert"></p></div>
+      <div class="field"><label for="f-tel">연락처</label><input id="f-tel" name="tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="010-0000-0000" maxlength="13" required aria-describedby="e-tel"><p class="err" id="e-tel" role="alert"></p></div>
+      <div class="field"><label for="f-date">희망 방문일</label><input id="f-date" name="date" type="date" required aria-describedby="e-date"><p class="err" id="e-date" role="alert"></p></div>
       <div class="field"><label for="f-type">관심 타입</label>
         <select id="f-type" name="type"><option value="">선택 안 함</option><option>49㎡</option><option>84㎡</option><option>122㎡</option></select></div>
       <div class="consent" aria-label="개인정보 수집·이용 안내">
@@ -593,6 +599,7 @@ src="https://www.facebook.com/tr?id=1706570081173452&ev=PageView&noscript=1"
         <p style="margin-top:6px;color:var(--muted)">동의를 거부할 수 있으며, 거부 시 방문 예약이 제한됩니다.</p>
       </div>
       <label class="check"><input type="checkbox" name="agree" id="f-agree" required> 개인정보 수집·이용에 동의합니다 (필수)</label>
+      <p class="err" id="e-agree" role="alert" style="margin:-12px 0 16px"></p>
       <button class="btn" type="submit">방문 예약 신청</button>
       <p class="form-msg" id="formMsg" role="status" aria-live="polite"></p>
     </form>
@@ -709,13 +716,48 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.b
 document.getElementById('f-date').min = new Date().toISOString().slice(0, 10);
 const form = document.getElementById('reserveForm');
 const msg = document.getElementById('formMsg');
+const PH = { name:'이름', tel:'010-0000-0000' };
+// 전화번호 자동 하이픈: 숫자만 남기고 010-1234-5678 / 010-123-4567 형태로
+form.tel.addEventListener('input', () => {
+  const el = form.tel;
+  const before = el.value.slice(0, el.selectionStart).replace(/\D/g,'').length; // 커서 앞 숫자 개수
+  const d = el.value.replace(/\D/g,'').slice(0,11);
+  let v = d;
+  if (d.length > 3 && d.length <= 7) v = d.slice(0,3)+'-'+d.slice(3);
+  else if (d.length > 7) v = d.length === 10 ? d.slice(0,3)+'-'+d.slice(3,6)+'-'+d.slice(6)
+                                             : d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7);
+  el.value = v;
+  let pos = 0, n = 0;                       // 커서 위치 복원
+  while (pos < v.length && n < before) { if (/\d/.test(v[pos])) n++; pos++; }
+  el.setSelectionRange(pos, pos);
+});
+function setErr(field, text, inside){
+  const el = form[field], box = document.getElementById('e-'+field);
+  if (field === 'agree') { el.closest('.check').classList.add('invalid'); }
+  else { el.classList.add('invalid'); el.setAttribute('aria-invalid','true'); }
+  if (inside) { el.placeholder = text; box.classList.remove('show'); box.textContent=''; }
+  else { box.textContent = text; box.classList.add('show'); }
+}
+function clearErr(field){
+  const el = form[field], box = document.getElementById('e-'+field);
+  if (field === 'agree') el.closest('.check').classList.remove('invalid');
+  else { el.classList.remove('invalid'); el.removeAttribute('aria-invalid'); if (PH[field]) el.placeholder = PH[field]; }
+  box.classList.remove('show'); box.textContent='';
+}
+['name','tel','date','agree'].forEach(f => form[f].addEventListener(f==='agree'||f==='date' ? 'change' : 'input', () => clearErr(f)));
+
 form.addEventListener('submit', (e) => {
   e.preventDefault();
+  msg.textContent = '';
+  ['name','tel','date','agree'].forEach(clearErr);
   const tel = form.tel.value.replace(/[^0-9]/g, '');
-  if (!form.name.value.trim()) { msg.textContent = '이름을 입력해 주세요.'; form.name.focus(); return; }
-  if (!/^01[0-9]{8,9}$/.test(tel)) { msg.textContent = '연락처를 010-0000-0000 형식으로 입력해 주세요.'; form.tel.focus(); return; }
-  if (!form.date.value) { msg.textContent = '희망 방문일을 선택해 주세요.'; form.date.focus(); return; }
-  if (!form.agree.checked) { msg.textContent = '개인정보 수집·이용에 동의해야 예약할 수 있습니다.'; form.agree.focus(); return; }
+  const errs = [];
+  if (!form.name.value.trim()) { setErr('name','이름을 입력해 주세요', true); errs.push('name'); }
+  if (!tel) { setErr('tel','연락처를 입력해 주세요', true); errs.push('tel'); }
+  else if (!/^01[0-9]{8,9}$/.test(tel)) { setErr('tel','010-0000-0000 형식으로 입력해 주세요'); errs.push('tel'); }
+  if (!form.date.value) { setErr('date','희망 방문일을 선택해 주세요'); errs.push('date'); }
+  if (!form.agree.checked) { setErr('agree','개인정보 수집·이용에 동의해 주세요'); errs.push('agree'); }
+  if (errs.length) { form[errs[0]].focus(); return; }
   // 3) 예약 신청 완료 = 메인 전환 (Lead). 개인정보는 픽셀로 보내지 않음
   if (!form.dataset.sent) { px('track', 'Lead', { content_name: '방문예약', content_category: form.type.value || '미선택' }); form.dataset.sent = '1'; }
   if (!form.getAttribute('action')) { msg.textContent = '입력 확인 완료. 아직 전송 주소가 연결되지 않아 저장되지 않았습니다.'; return; }
