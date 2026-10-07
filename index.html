@@ -249,7 +249,9 @@ figcaption.cap{font-size:11.5px;color:var(--muted);text-align:right;padding:8px 
 .field label{display:block;font-size:13.5px;font-weight:600;margin-bottom:5px}
 .field input,.field select{width:100%;font:inherit;font-size:16px;padding:11px 13px;border:1px solid var(--line);background:#fff;border-radius:0}
 .field input:focus,.field select:focus{border-color:var(--accent-deep);outline:none;box-shadow:0 0 0 3px rgba(93,80,150,.2)}
-.consent{font-size:13px;line-height:1.6;background:var(--stone-2);padding:13px 15px;margin:4px 0 12px;max-height:190px;overflow-y:auto}
+.consent{font-size:13px;line-height:1.6;background:var(--stone-2);padding:13px 15px;margin:0 0 12px;max-height:190px;overflow-y:auto}
+/* 입력 칸 제목(.field label)과 같은 모양 */
+.consent-title{display:block;font-size:13.5px;font-weight:600;margin-bottom:5px}
 .consent-intro{margin-bottom:10px;color:var(--text)}
 .consent dl{display:grid;grid-template-columns:72px 1fr;gap:5px 10px}
 .consent dt{color:var(--muted)}
@@ -595,7 +597,8 @@ src="https://www.facebook.com/tr?id=1706570081173452&ev=PageView&noscript=1"
       <div class="field"><label for="f-date">희망 방문일</label><input id="f-date" name="date" type="date" required aria-describedby="e-date"><p class="err" id="e-date" role="alert"></p></div>
       <div class="field"><label for="f-type">관심 타입</label>
         <select id="f-type" name="type"><option value="">선택 안 함</option><option>49㎡</option><option>84㎡</option><option>122㎡</option></select></div>
-      <div class="consent" aria-label="개인정보 수집·이용 안내">
+      <p class="consent-title" id="consent-title">개인정보 수집 및 이용에 대한 안내</p>
+      <div class="consent" role="region" tabindex="0" aria-labelledby="consent-title">
         <p class="consent-intro">OOO은 고객님의 방문예약 등록요청에 필요한 최소한의 개인정보를 수집하고 있습니다. 이에 개인정보의 수집 및 이용에 관하여 안내하오니 충분히 읽어 보신 후 동의하여 주시기 바랍니다.</p>
         <dl>
           <dt>수집 항목</dt><dd>이름, 연락처, 희망 방문일, 관심 타입</dd>
